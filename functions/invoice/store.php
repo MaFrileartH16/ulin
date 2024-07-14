@@ -4,17 +4,17 @@
 	require '../../libs/pdf/fpdf.php';
 	include '../../libs/qrcode/qrlib.php';
 	
-	// Inisialisasi objek FPDF
+	// Initialize FPDF object
 	$pdf = new FPDF();
 	$pdf->AddPage();
 	$pdf->SetFont('Arial', 'B', 16);
 	
-	// Tambahkan nama brand di atas invoice
+	// Add brand name on top of the invoice
 	$pdf->Cell(0, 10, 'Invoice Ulin', 0, 1, 'C');
 	
-	// Memeriksa jika metode permintaan adalah POST
+	// Check if request method is POST
 	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-		// Mengambil data dari formulir
+		// Retrieve data from the form
 		$customerName = $_POST['full_name'];
 		$customerEmail = $_POST['email'];
 		$numberOfPeople = $_POST['number_of_people'];
@@ -22,11 +22,11 @@
 		$totalPrice = filter_var($totalPriceStr, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
 		$signatureData = $_POST['signature'];
 		
-		// Menentukan tourId dari parameter $_GET['id']
+		// Determine tourId from $_GET['id']
 		if (isset($_GET['id'])) {
 			$tourId = $_GET['id'];
 			
-			// Query untuk mendapatkan detail tour
+			// Query to get tour details
 			$queryTour = 'SELECT name, location, price FROM 2230511102_tours WHERE id = :tourId';
 			$stmtTour = $conn->prepare($queryTour);
 			$stmtTour->bindParam(':tourId', $tourId, PDO::PARAM_INT);
@@ -34,16 +34,16 @@
 			$tour = $stmtTour->fetch(PDO::FETCH_ASSOC);
 			
 			if (!$tour) {
-				echo 'Detail tour tidak ditemukan.';
+				echo 'Tour details not found.';
 				exit;
 			}
 		} else {
-			// Handle jika tourId tidak tersedia atau tidak valid
-			echo 'Parameter tourId tidak ditemukan.';
+			// Handle if tourId is not available or invalid
+			echo 'Parameter tourId not found.';
 			exit;
 		}
 		
-		// Penanganan data tanda tangan
+		// Handling signature data
 		$signatureData = str_replace('data:image/png;base64,', '', $signatureData);
 		$signatureData = str_replace(' ', '+', $signatureData);
 		$decodedData = base64_decode($signatureData);
@@ -57,7 +57,7 @@
 		$signatureFilePath = $signatureDir . $signatureName;
 		file_put_contents($signatureFilePath, $decodedData);
 		
-		// Simpan path tanda tangan ke database
+		// Save signature path to database
 		$query = "INSERT INTO 2230511102_invoices (customer_name, customer_email, number_of_people, total_price, signature_url, pdf_url, qr_code_url, tour_id) VALUES (:customerName, :customerEmail, :numberOfPeople, :totalPrice, :signatureName, '', '', :tourId)";
 		$stmt = $conn->prepare($query);
 		$stmt->bindParam(':customerName', $customerName);
@@ -70,64 +70,64 @@
 		if ($stmt->execute()) {
 			$receiptId = $conn->lastInsertId();
 			
-			// Memeriksa keberadaan file tanda tangan sebelum membuat PDF
+			// Check if signature file exists before creating PDF
 			if (file_exists($signatureFilePath)) {
-				// Menyiapkan output PDF dengan informasi yang relevan
+				// Prepare PDF output with relevant information
 				$pdf->SetFont('Times', 'B', 12);
 				
-				// Informasi Pelanggan
-				$pdf->Cell(0, 10, 'Informasi Pelanggan', 0, 1, 'L');
-				$pdf->Cell(40, 10, 'Nama Pelanggan:', 0, 0);
+				// Customer Information
+				$pdf->Cell(0, 10, 'Customer Information', 0, 1, 'L');
+				$pdf->Cell(40, 10, 'Customer Name:', 0, 0);
 				$pdf->Cell(60, 10, $customerName, 0, 1);
 				
 				$pdf->Cell(40, 10, 'Email:', 0, 0);
 				$pdf->Cell(60, 10, $customerEmail, 0, 1);
 				
-				$pdf->Ln(5); // Spasi
+				$pdf->Ln(5); // Space
 				
-				// Informasi Tour
-				$pdf->Cell(0, 10, 'Detail Tour', 0, 1, 'L');
-				$pdf->Cell(40, 10, 'Nama Wisata:', 0, 0);
+				// Tour Details
+				$pdf->Cell(0, 10, 'Tour Details', 0, 1, 'L');
+				$pdf->Cell(40, 10, 'Tour Name:', 0, 0);
 				$pdf->Cell(60, 10, $tour['name'], 0, 1);
 				
-				$pdf->Cell(40, 10, 'Lokasi:', 0, 0);
+				$pdf->Cell(40, 10, 'Location:', 0, 0);
 				$pdf->Cell(60, 10, $tour['location'], 0, 1);
 				
-				$pdf->Cell(40, 10, 'Harga per Orang:', 0, 0);
+				$pdf->Cell(40, 10, 'Price per Person:', 0, 0);
 				$pdf->Cell(60, 10, 'IDR ' . number_format($tour['price'], 2), 0, 1);
 				
-				$pdf->Ln(5); // Spasi
+				$pdf->Ln(5); // Space
 				
-				// Detail Pembayaran
-				$pdf->Cell(0, 10, 'Detail Pembayaran', 0, 1, 'L');
-				$pdf->Cell(40, 10, 'Jumlah Orang:', 0, 0);
+				// Payment Details
+				$pdf->Cell(0, 10, 'Payment Details', 0, 1, 'L');
+				$pdf->Cell(40, 10, 'Number of People:', 0, 0);
 				$pdf->Cell(60, 10, $numberOfPeople, 0, 1);
 				
-				$pdf->Cell(40, 10, 'Total Harga:', 0, 0);
+				$pdf->Cell(40, 10, 'Total Price:', 0, 0);
 				$pdf->Cell(60, 10, 'IDR ' . number_format($totalPrice, 2), 0, 1);
 				
-				$pdf->Ln(10); // Spasi
+				$pdf->Ln(10); // Space
 				
-				// Menambahkan tanda tangan ke PDF (bottom-right corner)
+				// Add signature to PDF (bottom-right corner)
 				$pdf->Image($signatureFilePath, 150, 240, 40, 20);
 				
-				// Nama di bawah tanda tangan
-				$pdf->SetXY(150, 260); // Atur posisi X dan Y untuk nama di bawah tanda tangan
+				// Name below the signature
+				$pdf->SetXY(150, 260); // Set X and Y position for name below the signature
 				$pdf->Cell(0, 10, $customerName, 0, 1, 'R');
 				
-				// Output PDF ke browser untuk diunduh
+				// Output PDF to browser for download
 				$uniqueFileName = uniqid() . '.pdf';
 				$filePath = '../../invoices/' . $uniqueFileName;
 				$pdf->Output('F', $filePath);
 				
-				// Update URL PDF ke database
+				// Update PDF URL to database
 				$updateQuery = 'UPDATE 2230511102_invoices SET pdf_url = :pdfUrl WHERE id = :receiptId';
 				$stmt = $conn->prepare($updateQuery);
 				$stmt->bindParam(':pdfUrl', $uniqueFileName);
 				$stmt->bindParam(':receiptId', $receiptId, PDO::PARAM_INT);
 				$stmt->execute();
 				
-				// Generate QR code menggunakan URL PDF
+				// Generate QR code using PDF URL
 				$qrDir = '../../qr_codes/';
 				if (!is_dir($qrDir)) {
 					mkdir($qrDir, 0755, true);
@@ -137,7 +137,7 @@
 				$qrFilePath = $qrDir . $qrFileName;
 				QRcode::png('https://jasapembuatanwebsite.online/ulin/invoices/' . $uniqueFileName, $qrFilePath);
 				
-				// Update URL QR code ke database
+				// Update QR code URL to database
 				$updateQrQuery = 'UPDATE 2230511102_invoices SET qr_code_url = :qrCodeUrl WHERE id = :receiptId';
 				$stmt = $conn->prepare($updateQrQuery);
 				$stmt->bindParam(':qrCodeUrl', $qrFileName);
@@ -147,10 +147,10 @@
 				header('Location: ' . $filePath);
 				exit;
 			} else {
-				echo 'Gagal membuat PDF karena ada masalah dengan file tanda tangan.';
+				echo 'Failed to create PDF due to issues with the signature file.';
 			}
 		} else {
-			echo 'Gagal menyimpan data ke database.';
+			echo 'Failed to save data to the database.';
 		}
 	}
 ?>

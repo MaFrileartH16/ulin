@@ -70,7 +70,8 @@
 	</section>
 </main>
 
-<footer>footer</footer>
+<footer class="h-20 flex justify-center items-center bg-neutral-100 text-neutral-500">
+	<p>&copy; 2024 Ulin. All rights reserved.</p>
 </body>
 </html>
 
