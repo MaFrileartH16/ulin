@@ -135,7 +135,7 @@
 				
 				$qrFileName = uniqid() . '.png';
 				$qrFilePath = $qrDir . $qrFileName;
-				QRcode::png('invoices/' . $uniqueFileName, $qrFilePath);
+				QRcode::png('https://jasapembuatanwebsite.online/ulin/invoices/' . $uniqueFileName, $qrFilePath);
 				
 				// Update URL QR code ke database
 				$updateQrQuery = 'UPDATE 2230511102_invoices SET qr_code_url = :qrCodeUrl WHERE id = :receiptId';
